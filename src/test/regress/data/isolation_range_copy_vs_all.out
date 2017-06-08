@@ -1,0 +1,715 @@
+Parsed test spec with 2 sessions
+
+starting permutation: s1-begin s2-begin s1-copy s2-copy s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s2-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s1-commit: COMMIT;
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+5               f             
+6               g             
+6               g             
+7               h             
+7               h             
+8               i             
+8               i             
+9               j             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-copy s2-select s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s2-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+step s1-commit: COMMIT;
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-copy s2-insert s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s2-insert: INSERT INTO range_copy VALUES(0, 'k');
+step s1-commit: COMMIT;
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+0              k              
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-copy s2-update s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s2-update: UPDATE range_copy SET data = 'l' WHERE id = 0;
+step s1-commit: COMMIT;
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0              l              
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-ddl-unique-constraint s1-begin s2-begin s1-copy s2-upsert s1-commit s2-commit s1-select
+step s1-ddl-unique-constraint: ALTER TABLE range_copy ADD CONSTRAINT range_copy_unique UNIQUE(id);
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s2-upsert: INSERT INTO range_copy VALUES(0, 'm') ON CONFLICT ON CONSTRAINT range_copy_unique DO UPDATE SET data = 'l';
+step s1-commit: COMMIT;
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0              l              
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-copy s2-delete s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s2-delete: DELETE FROM range_copy WHERE id = 1;
+step s1-commit: COMMIT;
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-copy s2-truncate s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s2-truncate: TRUNCATE range_copy; <waiting ...>
+step s1-commit: COMMIT;
+step s2-truncate: <... completed>
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+
+starting permutation: s1-begin s2-begin s1-copy s2-drop s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s2-drop: DROP TABLE range_copy; <waiting ...>
+step s1-commit: COMMIT;
+step s2-drop: <... completed>
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+ERROR:  relation "range_copy" does not exist
+
+starting permutation: s1-begin s2-begin s1-copy s2-ddl-create-index s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s2-ddl-create-index: CREATE INDEX range_copy_index ON range_copy(id); <waiting ...>
+step s1-commit: COMMIT;
+step s2-ddl-create-index: <... completed>
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-ddl-create-index s1-begin s2-begin s1-copy s2-ddl-drop-index s1-commit s2-commit s1-select
+step s1-ddl-create-index: CREATE INDEX range_copy_index ON range_copy(id);
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s2-ddl-drop-index: DROP INDEX range_copy_index; <waiting ...>
+step s1-commit: COMMIT;
+step s2-ddl-drop-index: <... completed>
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-copy s2-ddl-add-column s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s2-ddl-add-column: ALTER TABLE range_copy ADD new_column int DEFAULT 0; <waiting ...>
+step s1-commit: COMMIT;
+step s2-ddl-add-column: <... completed>
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           new_column     
+
+0               a             0              
+1               b             0              
+2               c             0              
+3               d             0              
+4               e             0              
+5               f             0              
+6               g             0              
+7               h             0              
+8               i             0              
+9               j             0              
+
+starting permutation: s1-ddl-add-column s1-begin s2-begin s1-copy-additional-column s2-ddl-drop-column s1-commit s2-commit s1-select
+step s1-ddl-add-column: ALTER TABLE range_copy ADD new_column int DEFAULT 0;
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy-additional-column: COPY range_copy FROM PROGRAM 'echo 5, f, 5\\n6, g, 6\\n7, h, 7\\n8, i, 8\\n9, j, 9' WITH CSV;
+step s2-ddl-drop-column: ALTER TABLE range_copy DROP new_column; <waiting ...>
+step s1-commit: COMMIT;
+step s2-ddl-drop-column: <... completed>
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-copy s2-ddl-unique-constraint s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s2-ddl-unique-constraint: ALTER TABLE range_copy ADD CONSTRAINT range_copy_unique UNIQUE(id); <waiting ...>
+step s1-commit: COMMIT;
+step s2-ddl-unique-constraint: <... completed>
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-copy-duplicate s2-ddl-unique-constraint s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy-duplicate: COPY range_copy FROM PROGRAM 'echo 0, f\\n1, g\\n2, h\\n3, i\\n4, j' WITH CSV;
+step s2-ddl-unique-constraint: ALTER TABLE range_copy ADD CONSTRAINT range_copy_unique UNIQUE(id); <waiting ...>
+step s1-commit: COMMIT;
+step s2-ddl-unique-constraint: <... completed>
+error in steps s1-commit s2-ddl-unique-constraint: ERROR:  could not create unique index "range_copy_unique_102140"
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+0               f             
+1               b             
+1               g             
+2               c             
+2               h             
+3               d             
+3               i             
+4               e             
+4               j             
+
+starting permutation: s1-begin s2-begin s1-copy s2-table-size s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s2-table-size: SELECT citus_table_size('range_copy'); SELECT citus_relation_size('range_copy'); SELECT citus_total_relation_size('range_copy');
+citus_table_size
+
+16384          
+citus_relation_size
+
+8192           
+citus_total_relation_size
+
+16384          
+step s1-commit: COMMIT;
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-copy s2-master-modify-multiple-shards s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s2-master-modify-multiple-shards: SELECT master_modify_multiple_shards('DELETE FROM range_copy;'); <waiting ...>
+step s1-commit: COMMIT;
+step s2-master-modify-multiple-shards: <... completed>
+master_modify_multiple_shards
+
+10             
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+
+starting permutation: s1-drop s1-create-non-distributed-table s1-begin s2-begin s1-copy s2-distribute-table s1-commit s2-commit s1-select
+step s1-drop: DROP TABLE range_copy;
+step s1-create-non-distributed-table: CREATE TABLE range_copy(id integer, data text); COPY range_copy FROM PROGRAM 'echo 0, a\\n1, b\\n2, c\\n3, d\\n4, e' WITH CSV;
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s2-distribute-table: SELECT create_distributed_table('range_copy', 'id'); <waiting ...>
+step s1-commit: COMMIT;
+step s2-distribute-table: <... completed>
+create_distributed_table
+
+               
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-select s2-copy s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+step s2-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s1-commit: COMMIT;
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-insert s2-copy s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-insert: INSERT INTO range_copy VALUES(0, 'k');
+step s2-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s1-commit: COMMIT;
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+0              k              
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-update s2-copy s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-update: UPDATE range_copy SET data = 'l' WHERE id = 0;
+step s2-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s1-commit: COMMIT;
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0              l              
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-ddl-unique-constraint s1-begin s2-begin s1-upsert s2-copy s1-commit s2-commit s1-select
+step s1-ddl-unique-constraint: ALTER TABLE range_copy ADD CONSTRAINT range_copy_unique UNIQUE(id);
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-upsert: INSERT INTO range_copy VALUES(0, 'm') ON CONFLICT ON CONSTRAINT range_copy_unique DO UPDATE SET data = 'l';
+step s2-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s1-commit: COMMIT;
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0              l              
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-delete s2-copy s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-delete: DELETE FROM range_copy WHERE id = 1;
+step s2-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s1-commit: COMMIT;
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-truncate s2-copy s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-truncate: TRUNCATE range_copy;
+step s2-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV; <waiting ...>
+step s1-commit: COMMIT;
+step s2-copy: <... completed>
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-drop s2-copy s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-drop: DROP TABLE range_copy;
+step s2-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV; <waiting ...>
+step s1-commit: COMMIT;
+step s2-copy: <... completed>
+error in steps s1-commit s2-copy: ERROR:  relation "range_copy" does not exist
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+ERROR:  relation "range_copy" does not exist
+
+starting permutation: s1-begin s2-begin s1-ddl-create-index s2-copy s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-ddl-create-index: CREATE INDEX range_copy_index ON range_copy(id);
+step s2-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV; <waiting ...>
+step s1-commit: COMMIT;
+step s2-copy: <... completed>
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-ddl-create-index s1-begin s2-begin s1-ddl-drop-index s2-copy s1-commit s2-commit s1-select
+step s1-ddl-create-index: CREATE INDEX range_copy_index ON range_copy(id);
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-ddl-drop-index: DROP INDEX range_copy_index;
+step s2-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV; <waiting ...>
+step s1-commit: COMMIT;
+step s2-copy: <... completed>
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-ddl-add-column s2-copy s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-ddl-add-column: ALTER TABLE range_copy ADD new_column int DEFAULT 0;
+step s2-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV; <waiting ...>
+step s1-commit: COMMIT;
+step s2-copy: <... completed>
+error in steps s1-commit s2-copy: ERROR:  missing data for column "new_column"
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           new_column     
+
+0               a             0              
+1               b             0              
+2               c             0              
+3               d             0              
+4               e             0              
+
+starting permutation: s1-ddl-add-column s1-begin s2-begin s1-ddl-drop-column s2-copy s1-commit s2-commit s1-select
+step s1-ddl-add-column: ALTER TABLE range_copy ADD new_column int DEFAULT 0;
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-ddl-drop-column: ALTER TABLE range_copy DROP new_column;
+step s2-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV; <waiting ...>
+step s1-commit: COMMIT;
+step s2-copy: <... completed>
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-ddl-unique-constraint s2-copy s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-ddl-unique-constraint: ALTER TABLE range_copy ADD CONSTRAINT range_copy_unique UNIQUE(id);
+step s2-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV; <waiting ...>
+step s1-commit: COMMIT;
+step s2-copy: <... completed>
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-ddl-unique-constraint s2-copy-duplicate s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-ddl-unique-constraint: ALTER TABLE range_copy ADD CONSTRAINT range_copy_unique UNIQUE(id);
+step s2-copy-duplicate: COPY range_copy FROM PROGRAM 'echo 0, f\\n1, g\\n2, h\\n3, i\\n4, j' WITH CSV; <waiting ...>
+step s1-commit: COMMIT;
+step s2-copy-duplicate: <... completed>
+error in steps s1-commit s2-copy-duplicate: ERROR:  duplicate key value violates unique constraint "range_copy_unique_102188"
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+
+starting permutation: s1-begin s2-begin s1-table-size s2-copy s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-table-size: SELECT citus_table_size('range_copy'); SELECT citus_relation_size('range_copy'); SELECT citus_total_relation_size('range_copy');
+citus_table_size
+
+16384          
+citus_relation_size
+
+8192           
+citus_total_relation_size
+
+16384          
+step s2-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV;
+step s1-commit: COMMIT;
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-begin s2-begin s1-master-modify-multiple-shards s2-copy s1-commit s2-commit s1-select
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-master-modify-multiple-shards: SELECT master_modify_multiple_shards('DELETE FROM range_copy;');
+master_modify_multiple_shards
+
+5              
+step s2-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV; <waiting ...>
+step s1-commit: COMMIT;
+step s2-copy: <... completed>
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             
+
+starting permutation: s1-drop s1-create-non-distributed-table s1-begin s2-begin s1-distribute-table s2-copy s1-commit s2-commit s1-select
+step s1-drop: DROP TABLE range_copy;
+step s1-create-non-distributed-table: CREATE TABLE range_copy(id integer, data text); COPY range_copy FROM PROGRAM 'echo 0, a\\n1, b\\n2, c\\n3, d\\n4, e' WITH CSV;
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-distribute-table: SELECT create_distributed_table('range_copy', 'id');
+create_distributed_table
+
+               
+step s2-copy: COPY range_copy FROM PROGRAM 'echo 5, f\\n6, g\\n7, h\\n8, i\\n9, j' WITH CSV; <waiting ...>
+step s1-commit: COMMIT;
+step s2-copy: <... completed>
+step s2-commit: COMMIT;
+step s1-select: SELECT * FROM range_copy ORDER BY id, data;
+id             data           
+
+0               a             
+1               b             
+2               c             
+3               d             
+4               e             
+5               f             
+6               g             
+7               h             
+8               i             
+9               j             

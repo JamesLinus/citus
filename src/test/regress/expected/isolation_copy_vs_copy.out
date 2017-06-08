@@ -1,0 +1,55 @@
+Parsed test spec with 6 sessions
+
+starting permutation: s1-begin s2-begin s1-copy s2-copy s1-commit s2-commit s2-select
+create_distributed_table
+
+               
+create_distributed_table
+
+               
+step s1-begin: BEGIN;
+step s2-begin: BEGIN;
+step s1-copy: COPY hash_table FROM PROGRAM 'echo 1,a' WITH CSV;
+step s2-copy: COPY hash_table FROM PROGRAM 'echo 2,b' WITH CSV;
+step s1-commit: COMMIT;
+step s2-commit: COMMIT;
+step s2-select: SELECT COUNT(*) FROM hash_table;
+count          
+
+2              
+
+starting permutation: s3-begin s4-begin s3-copy s4-copy s3-commit s4-commit s4-select
+create_distributed_table
+
+               
+create_distributed_table
+
+               
+step s3-begin: BEGIN;
+step s4-begin: BEGIN;
+step s3-copy: COPY append_table FROM PROGRAM 'echo 1,a' WITH CSV;
+step s4-copy: COPY append_table FROM PROGRAM 'echo 2,b' WITH CSV;
+step s3-commit: COMMIT;
+step s4-commit: COMMIT;
+step s4-select: SELECT COUNT(*) FROM append_table;
+count          
+
+2              
+
+starting permutation: s5-begin s6-begin s5-copy s6-copy s5-commit s6-commit s6-select
+create_distributed_table
+
+               
+create_distributed_table
+
+               
+step s5-begin: BEGIN;
+step s6-begin: BEGIN;
+step s5-copy: COPY range_table FROM PROGRAM 'echo 1,a' WITH CSV;
+step s6-copy: COPY range_table FROM PROGRAM 'echo 1,b' WITH CSV;
+step s5-commit: COMMIT;
+step s6-commit: COMMIT;
+step s6-select: SELECT COUNT(*) FROM range_table;
+count          
+
+2              
