@@ -86,7 +86,6 @@ static void ExecuteMultipleTasks(CitusScanState *scanState, List *taskList,
 								 bool isModificationQuery, bool expectResults);
 static int64 ExecuteModifyTasks(List *taskList, bool expectResults,
 								ParamListInfo paramListInfo, CitusScanState *scanState);
-static List * TaskShardIntervalList(List *taskList);
 static void AcquireExecutorShardLock(Task *task, CmdType commandType);
 static void AcquireExecutorMultiShardLocks(List *taskList);
 static bool RequiresConsistentSnapshot(Task *task);
@@ -1026,7 +1025,6 @@ ExecuteModifyTasks(List *taskList, bool expectResults, ParamListInfo paramListIn
 	ListCell *taskCell = NULL;
 	Task *firstTask = NULL;
 	int connectionFlags = 0;
-	List *shardIntervalList = NIL;
 	List *affectedTupleCountList = NIL;
 	HTAB *shardConnectionHash = NULL;
 	bool tasksPending = true;
@@ -1044,8 +1042,6 @@ ExecuteModifyTasks(List *taskList, bool expectResults, ParamListInfo paramListIn
 							   "transaction blocks which contain single-shard DML "
 							   "commands")));
 	}
-
-	shardIntervalList = TaskShardIntervalList(taskList);
 
 	/* ensure that there are no concurrent modifications on the same shards */
 	AcquireExecutorMultiShardLocks(taskList);
@@ -1070,8 +1066,7 @@ ExecuteModifyTasks(List *taskList, bool expectResults, ParamListInfo paramListIn
 	}
 
 	/* open connection to all relevant placements, if not already open */
-	shardConnectionHash = OpenTransactionsToAllShardPlacements(shardIntervalList,
-															   connectionFlags);
+	shardConnectionHash = OpenTransactionsForAllTasks(taskList, connectionFlags);
 
 	XactModificationLevel = XACT_MODIFICATION_MULTI_SHARD;
 
@@ -1206,29 +1201,6 @@ ExecuteModifyTasks(List *taskList, bool expectResults, ParamListInfo paramListIn
 	CHECK_FOR_INTERRUPTS();
 
 	return totalAffectedTupleCount;
-}
-
-
-/*
- * TaskShardIntervalList returns a list of shard intervals for a given list of
- * tasks.
- */
-static List *
-TaskShardIntervalList(List *taskList)
-{
-	ListCell *taskCell = NULL;
-	List *shardIntervalList = NIL;
-
-	foreach(taskCell, taskList)
-	{
-		Task *task = (Task *) lfirst(taskCell);
-		int64 shardId = task->anchorShardId;
-		ShardInterval *shardInterval = LoadShardInterval(shardId);
-
-		shardIntervalList = lappend(shardIntervalList, shardInterval);
-	}
-
-	return shardIntervalList;
 }
 
 
