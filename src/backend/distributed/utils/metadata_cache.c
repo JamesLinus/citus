@@ -343,6 +343,41 @@ LoadShardPlacement(uint64 shardId, uint64 placementId)
 
 
 /*
+ * FindShardPlacementOnNode returns the shard placement for the given shard
+ * on the given node, or returns NULL of no placement for the shard exists
+ * on the node.
+ */
+ShardPlacement *
+FindShardPlacementOnNode(char *nodeName, int nodePort, uint64 shardId)
+{
+	ShardCacheEntry *shardEntry = NULL;
+	DistTableCacheEntry *tableEntry = NULL;
+	ShardPlacement *placementArray = NULL;
+	int numberOfPlacements = 0;
+	ShardPlacement *placement = NULL;
+	int i = 0;
+
+	shardEntry = LookupShardCacheEntry(shardId);
+	tableEntry = shardEntry->tableEntry;
+	placementArray = tableEntry->arrayOfPlacementArrays[shardEntry->shardIndex];
+	numberOfPlacements = tableEntry->arrayOfPlacementArrayLengths[shardEntry->shardIndex];
+
+	for (i = 0; i < numberOfPlacements; i++)
+	{
+		if (strncmp(nodeName, placementArray[i].nodeName, WORKER_LENGTH) == 0 &&
+			nodePort == placementArray[i].nodePort)
+		{
+			placement = CitusMakeNode(ShardPlacement);
+			CopyShardPlacement(&placementArray[i], placement);
+			break;
+		}
+	}
+
+	return placement;
+}
+
+
+/*
  * ShardPlacementList returns the list of placements for the given shard from
  * the cache.
  *
