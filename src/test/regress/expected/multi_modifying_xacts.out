@@ -172,18 +172,16 @@ SELECT count(*) FROM researchers WHERE lab_id = 6;
 (1 row)
 
 ABORT;
--- applies to DDL, too
+-- we can mix DDL and INSERT
 BEGIN;
 INSERT INTO labs VALUES (6, 'Bell Labs');
 ALTER TABLE labs ADD COLUMN motto text;
-ERROR:  distributed DDL commands must not appear within transaction blocks containing single-shard data modifications
-COMMIT;
+ABORT;
 -- whether it occurs first or second
 BEGIN;
 ALTER TABLE labs ADD COLUMN motto text;
 INSERT INTO labs VALUES (6, 'Bell Labs');
-ERROR:  single-shard DML commands must not appear in transaction blocks which contain multi-shard data modifications
-COMMIT;
+ABORT;
 -- but the DDL should correctly roll back
 \d labs
      Table "public.labs"
@@ -383,16 +381,29 @@ ORDER BY nodeport;
  localhost |    57638 | t       | DROP FUNCTION
 (2 rows)
 
--- ALTER TABLE and COPY are compatible if ALTER TABLE precedes COPY
+-- ALTER and copy are compatible
 BEGIN;
 ALTER TABLE labs ADD COLUMN motto text;
 \copy labs from stdin delimiter ','
 ROLLBACK;
--- but not if COPY precedes ALTER TABLE
 BEGIN;
 \copy labs from stdin delimiter ','
 ALTER TABLE labs ADD COLUMN motto text;
-ERROR:  distributed DDL commands must not appear within transaction blocks containing single-shard data modifications
+ABORT;
+-- cannot perform DDL once a connection is used for multiple shards
+BEGIN;
+SELECT lab_id FROM researchers WHERE lab_id = 1 AND id = 0;
+ lab_id 
+--------
+(0 rows)
+
+SELECT lab_id FROM researchers WHERE lab_id = 2 AND id = 0;
+ lab_id 
+--------
+(0 rows)
+
+ALTER TABLE researchers ADD COLUMN motto text;
+ERROR:  cannot perform parallel DDL command because multiple placements have been accessed over the same connection
 ROLLBACK;
 -- multi-shard operations can co-exist with DDL in a transactional way
 BEGIN;

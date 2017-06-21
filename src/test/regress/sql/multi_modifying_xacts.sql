@@ -138,17 +138,17 @@ INSERT INTO labs VALUES (6, 'Bell Labs');
 SELECT count(*) FROM researchers WHERE lab_id = 6;
 ABORT;
 
--- applies to DDL, too
+-- we can mix DDL and INSERT
 BEGIN;
 INSERT INTO labs VALUES (6, 'Bell Labs');
 ALTER TABLE labs ADD COLUMN motto text;
-COMMIT;
+ABORT;
 
 -- whether it occurs first or second
 BEGIN;
 ALTER TABLE labs ADD COLUMN motto text;
 INSERT INTO labs VALUES (6, 'Bell Labs');
-COMMIT;
+ABORT;
 
 -- but the DDL should correctly roll back
 \d labs
@@ -289,7 +289,7 @@ ORDER BY nodeport, shardid;
 SELECT * FROM run_command_on_workers('drop function reject_large_id()')
 ORDER BY nodeport;
 
--- ALTER TABLE and COPY are compatible if ALTER TABLE precedes COPY
+-- ALTER and copy are compatible
 BEGIN;
 ALTER TABLE labs ADD COLUMN motto text;
 \copy labs from stdin delimiter ','
@@ -297,12 +297,18 @@ ALTER TABLE labs ADD COLUMN motto text;
 \.
 ROLLBACK;
 
--- but not if COPY precedes ALTER TABLE
 BEGIN;
 \copy labs from stdin delimiter ','
 12,fsociety
 \.
 ALTER TABLE labs ADD COLUMN motto text;
+ABORT;
+
+-- cannot perform DDL once a connection is used for multiple shards
+BEGIN;
+SELECT lab_id FROM researchers WHERE lab_id = 1 AND id = 0;
+SELECT lab_id FROM researchers WHERE lab_id = 2 AND id = 0;
+ALTER TABLE researchers ADD COLUMN motto text;
 ROLLBACK;
 
 -- multi-shard operations can co-exist with DDL in a transactional way
