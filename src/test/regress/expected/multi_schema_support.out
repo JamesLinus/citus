@@ -1095,3 +1095,126 @@ SELECT run_command_on_coordinator_and_workers('DROP USER "test-user"');
 (1 row)
 
 DROP FUNCTION run_command_on_coordinator_and_workers(p_sql text);
+-- test run_command_on_* UDFs with schema
+CREATE SCHEMA run_test_schema;
+CREATE TABLE run_test_schema.test_table(id int);
+SELECT create_distributed_table('run_test_schema.test_table','id');
+ create_distributed_table 
+--------------------------
+ 
+(1 row)
+
+-- randomly insert data to evaluate below UDFs better
+INSERT INTO run_test_schema.test_table VALUES(1);
+INSERT INTO run_test_schema.test_table VALUES(7);
+INSERT INTO run_test_schema.test_table VALUES(9);
+-- try UDFs which call shard_name as a subroutine
+SELECT run_command_on_placements('run_test_schema.test_table','SELECT pg_table_size(''%s'')');
+    run_command_on_placements     
+----------------------------------
+ (localhost,57637,1190033,t,0)
+ (localhost,57638,1190033,t,0)
+ (localhost,57637,1190034,t,8192)
+ (localhost,57638,1190034,t,8192)
+ (localhost,57637,1190035,t,0)
+ (localhost,57638,1190035,t,0)
+ (localhost,57637,1190036,t,0)
+ (localhost,57638,1190036,t,0)
+ (localhost,57637,1190037,t,0)
+ (localhost,57638,1190037,t,0)
+ (localhost,57637,1190038,t,0)
+ (localhost,57638,1190038,t,0)
+ (localhost,57637,1190039,t,0)
+ (localhost,57638,1190039,t,0)
+ (localhost,57637,1190040,t,0)
+ (localhost,57638,1190040,t,0)
+ (localhost,57637,1190041,t,8192)
+ (localhost,57638,1190041,t,8192)
+ (localhost,57637,1190042,t,0)
+ (localhost,57638,1190042,t,0)
+ (localhost,57637,1190043,t,0)
+ (localhost,57638,1190043,t,0)
+ (localhost,57637,1190044,t,0)
+ (localhost,57638,1190044,t,0)
+ (localhost,57637,1190045,t,0)
+ (localhost,57638,1190045,t,0)
+ (localhost,57637,1190046,t,0)
+ (localhost,57638,1190046,t,0)
+ (localhost,57637,1190047,t,0)
+ (localhost,57638,1190047,t,0)
+ (localhost,57637,1190048,t,0)
+ (localhost,57638,1190048,t,0)
+ (localhost,57637,1190049,t,0)
+ (localhost,57638,1190049,t,0)
+ (localhost,57637,1190050,t,0)
+ (localhost,57638,1190050,t,0)
+ (localhost,57637,1190051,t,0)
+ (localhost,57638,1190051,t,0)
+ (localhost,57637,1190052,t,0)
+ (localhost,57638,1190052,t,0)
+ (localhost,57637,1190053,t,0)
+ (localhost,57638,1190053,t,0)
+ (localhost,57637,1190054,t,0)
+ (localhost,57638,1190054,t,0)
+ (localhost,57637,1190055,t,0)
+ (localhost,57638,1190055,t,0)
+ (localhost,57637,1190056,t,0)
+ (localhost,57638,1190056,t,0)
+ (localhost,57637,1190057,t,0)
+ (localhost,57638,1190057,t,0)
+ (localhost,57637,1190058,t,0)
+ (localhost,57638,1190058,t,0)
+ (localhost,57637,1190059,t,0)
+ (localhost,57638,1190059,t,0)
+ (localhost,57637,1190060,t,0)
+ (localhost,57638,1190060,t,0)
+ (localhost,57637,1190061,t,8192)
+ (localhost,57638,1190061,t,8192)
+ (localhost,57637,1190062,t,0)
+ (localhost,57638,1190062,t,0)
+ (localhost,57637,1190063,t,0)
+ (localhost,57638,1190063,t,0)
+ (localhost,57637,1190064,t,0)
+ (localhost,57638,1190064,t,0)
+(64 rows)
+
+SELECT run_command_on_shards('run_test_schema.test_table','SELECT pg_table_size(''%s'')');
+ run_command_on_shards 
+-----------------------
+ (1190033,t,0)
+ (1190034,t,8192)
+ (1190035,t,0)
+ (1190036,t,0)
+ (1190037,t,0)
+ (1190038,t,0)
+ (1190039,t,0)
+ (1190040,t,0)
+ (1190041,t,8192)
+ (1190042,t,0)
+ (1190043,t,0)
+ (1190044,t,0)
+ (1190045,t,0)
+ (1190046,t,0)
+ (1190047,t,0)
+ (1190048,t,0)
+ (1190049,t,0)
+ (1190050,t,0)
+ (1190051,t,0)
+ (1190052,t,0)
+ (1190053,t,0)
+ (1190054,t,0)
+ (1190055,t,0)
+ (1190056,t,0)
+ (1190057,t,0)
+ (1190058,t,0)
+ (1190059,t,0)
+ (1190060,t,0)
+ (1190061,t,8192)
+ (1190062,t,0)
+ (1190063,t,0)
+ (1190064,t,0)
+(32 rows)
+
+-- Clean up the created schema
+DROP SCHEMA run_test_schema CASCADE;
+NOTICE:  drop cascades to table run_test_schema.test_table
