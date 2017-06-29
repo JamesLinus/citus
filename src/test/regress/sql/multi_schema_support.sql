@@ -777,7 +777,7 @@ INSERT INTO run_test_schema.test_table VALUES(7);
 INSERT INTO run_test_schema.test_table VALUES(9);
 
 -- try UDFs which call shard_name as a subroutine
-SELECT run_command_on_placements('run_test_schema.test_table','SELECT pg_table_size(''%s'')');
+SELECT sum(result::int) FROM run_command_on_placements('run_test_schema.test_table','SELECT pg_table_size(''%s'')');
 SELECT run_command_on_shards('run_test_schema.test_table','SELECT pg_table_size(''%s'')');
 
 -- Clean up the created schema
