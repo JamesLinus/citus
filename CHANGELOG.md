@@ -1,4 +1,4 @@
-### citus v7.0 (in development) ###
+### citus v7.0.0 (unreleased) ###
 
 * Replaces pg_dist_shard_placement metadata table with pg_dist_placement
 
