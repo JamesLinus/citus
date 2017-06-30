@@ -411,7 +411,7 @@ DeleteAllReferenceTablePlacementsFromNode(char *workerName, uint32 workerPort)
 
 		Oid referenceTableId = lfirst_oid(referenceTableCell);
 		List *placements = ShardPlacementsForTableOnGroup(referenceTableId, workerGroup);
-		ShardPlacement *placement = (ShardPlacement *) linitial(placements);
+		GroupShardPlacement *placement = (GroupShardPlacement *) linitial(placements);
 
 		uint64 shardId = placement->shardId;
 		uint64 placementId = placement->placementId;

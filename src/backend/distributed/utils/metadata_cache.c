@@ -165,6 +165,8 @@ static ShardInterval * TupleToShardInterval(HeapTuple heapTuple,
 											TupleDesc tupleDescriptor, Oid intervalTypeId,
 											int32 intervalTypeMod);
 static void CachedRelationLookup(const char *relationName, Oid *cachedOid);
+static ShardPlacement * ResolveGroupShardPlacement(
+	GroupShardPlacement *groupShardPlacement, ShardCacheEntry *shardEntry);
 
 
 /* exports for SQL callable functions */
@@ -305,16 +307,14 @@ LoadShardInterval(uint64 shardId)
  *
  * The return value is a copy of the cached ShardPlacement struct and may
  * therefore be modified and/or freed.
- *
- * CAUTION: The ShardPlacements returned by this function may have a NULL nodeName
  */
-ShardPlacement *
+GroupShardPlacement *
 LoadShardPlacement(uint64 shardId, uint64 placementId)
 {
 	ShardCacheEntry *shardEntry = NULL;
 	DistTableCacheEntry *tableEntry = NULL;
 
-	ShardPlacement *placementArray = NULL;
+	GroupShardPlacement *placementArray = NULL;
 	int numberOfPlacements = 0;
 
 	int i = 0;
@@ -332,8 +332,9 @@ LoadShardPlacement(uint64 shardId, uint64 placementId)
 	{
 		if (placementArray[i].placementId == placementId)
 		{
-			ShardPlacement *shardPlacement = CitusMakeNode(ShardPlacement);
-			CopyShardPlacement(&placementArray[i], shardPlacement);
+			GroupShardPlacement *shardPlacement = CitusMakeNode(GroupShardPlacement);
+
+			memcpy(shardPlacement, &placementArray[i], sizeof(GroupShardPlacement));
 
 			return shardPlacement;
 		}
@@ -341,6 +342,62 @@ LoadShardPlacement(uint64 shardId, uint64 placementId)
 
 	ereport(ERROR, (errmsg("could not find valid entry for shard placement "
 						   UINT64_FORMAT, placementId)));
+}
+
+
+/*
+ * ResolveGroupShardPlacement takes a GroupShardPlacement and adds additional data to it,
+ * such as the node we should consider it to be on.
+ */
+static ShardPlacement *
+ResolveGroupShardPlacement(GroupShardPlacement *groupShardPlacement,
+						   ShardCacheEntry *shardEntry)
+{
+	DistTableCacheEntry *tableEntry = shardEntry->tableEntry;
+	int shardIndex = shardEntry->shardIndex;
+	ShardInterval *shardInterval = tableEntry->sortedShardIntervalArray[shardIndex];
+
+	ShardPlacement *shardPlacement = CitusMakeNode(ShardPlacement);
+	uint32 groupId = groupShardPlacement->groupId;
+	WorkerNode *workerNode = NodeForGroup(groupId);
+
+	if (workerNode == NULL)
+	{
+		ereport(ERROR, (errmsg("the metadata is inconsistent"),
+						errdetail("there is a placement in group %u but "
+								  "there are no nodes in that group", groupId)));
+	}
+
+	/* copy everything into shardPlacement but preserve the header */
+	memcpy((((CitusNode *) shardPlacement) + 1),
+		   (((CitusNode *) groupShardPlacement) + 1),
+		   sizeof(GroupShardPlacement) - sizeof(CitusNode));
+
+	shardPlacement->nodeName = pstrdup(workerNode->workerName);
+	shardPlacement->nodePort = workerNode->workerPort;
+
+	/* fill in remaining fields */
+	Assert(tableEntry->partitionMethod != 0);
+	shardPlacement->partitionMethod = tableEntry->partitionMethod;
+	shardPlacement->colocationGroupId = tableEntry->colocationId;
+	if (tableEntry->partitionMethod == DISTRIBUTE_BY_HASH)
+	{
+		Assert(shardInterval->minValueExists);
+		Assert(shardInterval->valueTypeId == INT4OID);
+
+		/*
+		 * Use the lower boundary of the interval's range to identify
+		 * it for colocation purposes. That remains meaningful even if
+		 * a concurrent session splits a shard.
+		 */
+		shardPlacement->representativeValue = DatumGetInt32(shardInterval->minValue);
+	}
+	else
+	{
+		shardPlacement->representativeValue = 0;
+	}
+
+	return shardPlacement;
 }
 
 
@@ -356,7 +413,7 @@ ShardPlacementList(uint64 shardId)
 {
 	ShardCacheEntry *shardEntry = NULL;
 	DistTableCacheEntry *tableEntry = NULL;
-	ShardPlacement *placementArray = NULL;
+	GroupShardPlacement *placementArray = NULL;
 	int numberOfPlacements = 0;
 	List *placementList = NIL;
 	int i = 0;
@@ -372,21 +429,11 @@ ShardPlacementList(uint64 shardId)
 
 	for (i = 0; i < numberOfPlacements; i++)
 	{
-		/* copy placement into target context */
-		ShardPlacement *srcPlacement = &placementArray[i];
-		ShardPlacement *dstPlacement = CitusMakeNode(ShardPlacement);
+		GroupShardPlacement *groupShardPlacement = &placementArray[i];
+		ShardPlacement *shardPlacement = ResolveGroupShardPlacement(groupShardPlacement,
+																	shardEntry);
 
-		if (srcPlacement->nodeName == NULL)
-		{
-			uint32 groupId = srcPlacement->groupId;
-			ereport(ERROR, (errmsg("the metadata is inconsistent"),
-							errdetail("there is a placement in group %u but "
-									  "there are no nodes in that group", groupId)));
-		}
-
-		CopyShardPlacement(srcPlacement, dstPlacement);
-
-		placementList = lappend(placementList, dstPlacement);
+		placementList = lappend(placementList, shardPlacement);
 	}
 
 	/* if no shard placements are found, warn the user */
@@ -747,7 +794,7 @@ BuildCachedShardList(DistTableCacheEntry *cacheEntry)
 		cacheEntry->arrayOfPlacementArrays =
 			MemoryContextAllocZero(CacheMemoryContext,
 								   shardIntervalArrayLength *
-								   sizeof(ShardPlacement *));
+								   sizeof(GroupShardPlacement *));
 		cacheEntry->arrayOfPlacementArrayLengths =
 			MemoryContextAllocZero(CacheMemoryContext,
 								   shardIntervalArrayLength *
@@ -881,7 +928,7 @@ BuildCachedShardList(DistTableCacheEntry *cacheEntry)
 		List *placementList = NIL;
 		MemoryContext oldContext = NULL;
 		ListCell *placementCell = NULL;
-		ShardPlacement *placementArray = NULL;
+		GroupShardPlacement *placementArray = NULL;
 		int placementOffset = 0;
 		int numberOfPlacements = 0;
 
@@ -904,35 +951,14 @@ BuildCachedShardList(DistTableCacheEntry *cacheEntry)
 
 		/* and copy that list into the cache entry */
 		oldContext = MemoryContextSwitchTo(CacheMemoryContext);
-		placementArray = palloc0(numberOfPlacements * sizeof(ShardPlacement));
+		placementArray = palloc0(numberOfPlacements * sizeof(GroupShardPlacement));
 		foreach(placementCell, placementList)
 		{
-			ShardPlacement *srcPlacement = (ShardPlacement *) lfirst(placementCell);
-			ShardPlacement *dstPlacement = &placementArray[placementOffset];
+			GroupShardPlacement *srcPlacement =
+				(GroupShardPlacement *) lfirst(placementCell);
+			GroupShardPlacement *dstPlacement = &placementArray[placementOffset];
 
-			CopyShardPlacement(srcPlacement, dstPlacement);
-
-			/* fill in remaining fields */
-			Assert(cacheEntry->partitionMethod != 0);
-			dstPlacement->partitionMethod = cacheEntry->partitionMethod;
-			dstPlacement->colocationGroupId = cacheEntry->colocationId;
-			if (cacheEntry->partitionMethod == DISTRIBUTE_BY_HASH)
-			{
-				Assert(shardInterval->minValueExists);
-				Assert(shardInterval->valueTypeId == INT4OID);
-
-				/*
-				 * Use the lower boundary of the interval's range to identify
-				 * it for colocation purposes. That remains meaningful even if
-				 * a concurrent session splits a shard.
-				 */
-				dstPlacement->representativeValue =
-					DatumGetInt32(shardInterval->minValue);
-			}
-			else
-			{
-				dstPlacement->representativeValue = 0;
-			}
+			memcpy(dstPlacement, srcPlacement, sizeof(GroupShardPlacement));
 			placementOffset++;
 		}
 		MemoryContextSwitchTo(oldContext);
@@ -2288,26 +2314,12 @@ ResetDistTableCacheEntry(DistTableCacheEntry *cacheEntry)
 		 shardIndex++)
 	{
 		ShardInterval *shardInterval = cacheEntry->sortedShardIntervalArray[shardIndex];
-		ShardPlacement *placementArray = cacheEntry->arrayOfPlacementArrays[shardIndex];
-		int numberOfPlacements = cacheEntry->arrayOfPlacementArrayLengths[shardIndex];
+		GroupShardPlacement *placementArray =
+			cacheEntry->arrayOfPlacementArrays[shardIndex];
 		bool valueByVal = shardInterval->valueByVal;
 		bool foundInCache = false;
-		int placementIndex = 0;
 
 		/* delete the shard's placements */
-		for (placementIndex = 0;
-			 placementIndex < numberOfPlacements;
-			 placementIndex++)
-		{
-			ShardPlacement *placement = &placementArray[placementIndex];
-
-			if (placement->nodeName)
-			{
-				pfree(placement->nodeName);
-			}
-
-			/* placement itself is deleted as part of the array */
-		}
 		pfree(placementArray);
 
 		/* delete per-shard cache-entry */

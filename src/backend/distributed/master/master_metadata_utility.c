@@ -59,8 +59,8 @@
 static uint64 * AllocateUint64(uint64 value);
 static void RecordDistributedRelationDependencies(Oid distributedRelationId,
 												  Node *distributionKey);
-static ShardPlacement * TupleToShardPlacement(TupleDesc tupleDesc,
-											  HeapTuple heapTuple);
+static GroupShardPlacement * TupleToShardPlacement(TupleDesc tupleDesc,
+												   HeapTuple heapTuple);
 static uint64 DistributedTableSize(Oid relationId, char *sizeQuery);
 static uint64 DistributedTableSizeOnWorker(WorkerNode *workerNode, Oid relationId,
 										   char *sizeQuery);
@@ -221,9 +221,6 @@ DistributedTableSizeOnWorker(WorkerNode *workerNode, Oid relationId, char *sizeQ
 }
 
 
-/*
- * WARNING: The ShardPlacements returned by this function may have a NULL nodeName
- */
 List *
 ShardPlacementsForTableOnGroup(Oid relationId, uint32 groupId)
 {
@@ -235,7 +232,7 @@ ShardPlacementsForTableOnGroup(Oid relationId, uint32 groupId)
 
 	for (shardIndex = 0; shardIndex < shardIntervalArrayLength; shardIndex++)
 	{
-		ShardPlacement *placementArray =
+		GroupShardPlacement *placementArray =
 			distTableCacheEntry->arrayOfPlacementArrays[shardIndex];
 		int numberOfPlacements =
 			distTableCacheEntry->arrayOfPlacementArrayLengths[shardIndex];
@@ -243,7 +240,7 @@ ShardPlacementsForTableOnGroup(Oid relationId, uint32 groupId)
 
 		for (placementIndex = 0; placementIndex < numberOfPlacements; placementIndex++)
 		{
-			ShardPlacement *placement = &placementArray[placementIndex];
+			GroupShardPlacement *placement = &placementArray[placementIndex];
 
 			if (placement->groupId == groupId)
 			{
@@ -273,7 +270,7 @@ ShardIntervalsOnWorkerGroup(WorkerNode *workerNode, Oid relationId)
 
 	for (shardIndex = 0; shardIndex < shardIntervalArrayLength; shardIndex++)
 	{
-		ShardPlacement *placementArray =
+		GroupShardPlacement *placementArray =
 			distTableCacheEntry->arrayOfPlacementArrays[shardIndex];
 		int numberOfPlacements =
 			distTableCacheEntry->arrayOfPlacementArrayLengths[shardIndex];
@@ -281,7 +278,7 @@ ShardIntervalsOnWorkerGroup(WorkerNode *workerNode, Oid relationId)
 
 		for (placementIndex = 0; placementIndex < numberOfPlacements; placementIndex++)
 		{
-			ShardPlacement *placement = &placementArray[placementIndex];
+			GroupShardPlacement *placement = &placementArray[placementIndex];
 			uint64 shardId = placement->shardId;
 			bool metadataLock = false;
 
@@ -708,8 +705,6 @@ FinalizedShardPlacement(uint64 shardId, bool missingOk)
  *
  * This probably only should be called from metadata_cache.c.  Resides here
  * because it shares code with other routines in this file.
- *
- * WARNING: ShardPlacement's returned by this function may have a NULL nodeName/nodePort
  */
 List *
 BuildShardPlacementList(ShardInterval *shardInterval)
@@ -737,16 +732,8 @@ BuildShardPlacementList(ShardInterval *shardInterval)
 	{
 		TupleDesc tupleDescriptor = RelationGetDescr(pgPlacement);
 
-		ShardPlacement *placement = TupleToShardPlacement(tupleDescriptor, heapTuple);
-
-		uint32 groupId = placement->groupId;
-		WorkerNode *worker = NodeForGroup(groupId);
-
-		if (worker != NULL)
-		{
-			placement->nodeName = worker->workerName;
-			placement->nodePort = worker->workerPort;
-		}
+		GroupShardPlacement *placement = TupleToShardPlacement(tupleDescriptor,
+															   heapTuple);
 
 		shardPlacementList = lappend(shardPlacementList, placement);
 
@@ -765,10 +752,10 @@ BuildShardPlacementList(ShardInterval *shardInterval)
  * and converts this tuple to in-memory struct. The function assumes the
  * caller already has locks on the tuple, and doesn't perform any locking.
  */
-static ShardPlacement *
+static GroupShardPlacement *
 TupleToShardPlacement(TupleDesc tupleDescriptor, HeapTuple heapTuple)
 {
-	ShardPlacement *shardPlacement = NULL;
+	GroupShardPlacement *shardPlacement = NULL;
 	bool isNull = false;
 
 	Datum placementId = heap_getattr(heapTuple, Anum_pg_dist_placement_placementid,
@@ -784,10 +771,10 @@ TupleToShardPlacement(TupleDesc tupleDescriptor, HeapTuple heapTuple)
 	if (HeapTupleHeaderGetNatts(heapTuple->t_data) != Natts_pg_dist_placement ||
 		HeapTupleHasNulls(heapTuple))
 	{
-		ereport(ERROR, (errmsg("unexpected null in pg_dist_placement_tuple")));
+		ereport(ERROR, (errmsg("unexpected null in pg_dist_placement tuple")));
 	}
 
-	shardPlacement = CitusMakeNode(ShardPlacement);
+	shardPlacement = CitusMakeNode(GroupShardPlacement);
 	shardPlacement->placementId = DatumGetInt64(placementId);
 	shardPlacement->shardId = DatumGetInt64(shardId);
 	shardPlacement->shardLength = DatumGetInt64(shardLength);
@@ -1091,8 +1078,8 @@ DeleteShardPlacementRow(uint64 placementId)
 {
 	Relation pgDistPlacement = NULL;
 	SysScanDesc scanDescriptor = NULL;
-	ScanKeyData scanKey[1];
-	int scanKeyCount = 1;
+	const int scanKeyCount = 1;
+	ScanKeyData scanKey[scanKeyCount];
 	bool indexOK = true;
 	HeapTuple heapTuple = NULL;
 	TupleDesc tupleDescriptor = NULL;

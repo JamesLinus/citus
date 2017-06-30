@@ -47,16 +47,31 @@ typedef struct ShardInterval
 
 
 /* In-memory representation of a tuple in pg_dist_placement. */
-typedef struct ShardPlacement
+typedef struct GroupShardPlacement
 {
 	CitusNode type;
-	uint64 placementId;       /* sequence that implies this placement creation order */
+	uint64 placementId;     /* sequence that implies this placement creation order */
+	uint64 shardId;
+	uint64 shardLength;
+	RelayFileState shardState;
+	uint32 groupId;
+} GroupShardPlacement;
+
+
+/* A GroupShardPlacement which has had some extra data resolved */
+typedef struct ShardPlacement
+{
+	/*
+	 * careful, the rest of the code assumes this exactly matches GroupShardPlacement
+	 */
+	CitusNode type;
+	uint64 placementId;
 	uint64 shardId;
 	uint64 shardLength;
 	RelayFileState shardState;
 	uint32 groupId;
 
-	/* These fields aren't actually in pg_dist_placement but are convenient to keep */
+	/* the rest of the fields aren't from pg_dist_placement */
 	char *nodeName;
 	uint32 nodePort;
 	char partitionMethod;

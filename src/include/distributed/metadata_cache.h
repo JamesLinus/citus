@@ -61,8 +61,7 @@ typedef struct
 	FmgrInfo *hashFunction; /* NULL if table is not distributed by hash */
 
 	/* pg_dist_placement metadata */
-	/* careful, the ShardPlacements in this array may have NULL nodeName */
-	ShardPlacement **arrayOfPlacementArrays;
+	GroupShardPlacement **arrayOfPlacementArrays;
 	int *arrayOfPlacementArrayLengths;
 } DistTableCacheEntry;
 
@@ -70,7 +69,7 @@ typedef struct
 extern bool IsDistributedTable(Oid relationId);
 extern List * DistributedTableList(void);
 extern ShardInterval * LoadShardInterval(uint64 shardId);
-extern ShardPlacement * LoadShardPlacement(uint64 shardId, uint64 placementId);
+extern GroupShardPlacement * LoadShardPlacement(uint64 shardId, uint64 placementId);
 extern DistTableCacheEntry * DistributedTableCacheEntry(Oid distributedRelationId);
 extern int GetLocalGroupId(void);
 extern List * DistTableOidList(void);

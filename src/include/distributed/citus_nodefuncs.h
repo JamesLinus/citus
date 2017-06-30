@@ -69,6 +69,7 @@ extern READFUNC_RET ReadShardPlacement(READFUNC_ARGS);
 extern READFUNC_RET ReadRelationShard(READFUNC_ARGS);
 extern READFUNC_RET ReadTask(READFUNC_ARGS);
 extern READFUNC_RET ReadDeferredErrorMessage(READFUNC_ARGS);
+extern READFUNC_RET ReadGroupShardPlacement(READFUNC_ARGS);
 
 extern READFUNC_RET ReadUnsupportedCitusNode(READFUNC_ARGS);
 
@@ -80,6 +81,7 @@ extern void OutShardPlacement(OUTFUNC_ARGS);
 extern void OutRelationShard(OUTFUNC_ARGS);
 extern void OutTask(OUTFUNC_ARGS);
 extern void OutDeferredErrorMessage(OUTFUNC_ARGS);
+extern void OutGroupShardPlacement(OUTFUNC_ARGS);
 
 extern void OutMultiNode(OUTFUNC_ARGS);
 extern void OutMultiTreeRoot(OUTFUNC_ARGS);
