@@ -276,10 +276,25 @@ StartRemoteTransactionAbort(MultiConnection *connection)
 	Assert(transaction->transactionState != REMOTE_TRANS_INVALID);
 
 	/*
-	 * Clear previous results, so we have a better chance to send
-	 * ROLLBACK [PREPARED];
+	 * Clear previous results, so we have a better chance to send ROLLBACK
+	 * [PREPARED]. If we've previously sent a PREPARE TRANSACTION, we always
+	 * want to wait for that result, as that shouldn't take long and will
+	 * reserve resources.  But if there's another query running, we don't want
+	 * to wait, because a longrunning statement may be running, force it to be
+	 * killed in that case.
 	 */
-	ForgetResults(connection);
+	if (transaction->transactionState == REMOTE_TRANS_PREPARING ||
+		transaction->transactionState == REMOTE_TRANS_PREPARED)
+	{
+		ForgetResults(connection);
+	}
+	else if (!NonblockingForgetResults(connection))
+	{
+		ShutdownConnection(connection);
+
+		/* FinishRemoteTransactionAbort will emit warning */
+		return;
+	}
 
 	if (transaction->transactionState == REMOTE_TRANS_PREPARING ||
 		transaction->transactionState == REMOTE_TRANS_PREPARED)
